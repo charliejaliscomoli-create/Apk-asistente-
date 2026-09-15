@@ -74,3 +74,19 @@ jobs:
           name: Famous-Asistente-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          - name: Setup Android SDK
+            uses: android-actions/setup-android@v3
+              with:
+                  api-level: 36
+                      build-tools: 36.0.0
+                          cache: true
+
+                          - name: Configure Android SDK and Accept Licenses
+                            run: |
+                                mkdir -p "$ANDROID_HOME/licenses" || true
+                                    echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
+                                        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "$ANDROID_HOME/licenses/android-sdk-license"
+                                            echo "84831b9409646a533f3334216d753b284c14f129" >> "$ANDROID_HOME/licenses/android-sdk-license"
+                                                echo "601085b94cd77f0b54ff86406955dce50e1d2427" > "$ANDROID_HOME/licenses/android-googletv-license"
+                                                    echo "33b6a2b64f2130729876a9821371966582d61797" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+                                                        echo "859f317696f67ef3d7f30a50a5560e7834b43903" > "$ANDROID_HOME/licenses/google-gdk-license"
