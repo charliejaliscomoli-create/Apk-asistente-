@@ -79,7 +79,7 @@ fun HabitsScreen(
     val days = remember {
         val list = mutableListOf<Triple<String, String, Int>>()
         val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val sdfDayName = SimpleDateFormat("EE", Locale("es", "ES"))
+        val sdfDayName = SimpleDateFormat("EE", Locale.forLanguageTag("es-ES"))
         for (i in 6 downTo 0) {
             val c = Calendar.getInstance()
             c.add(Calendar.DAY_OF_YEAR, -i)

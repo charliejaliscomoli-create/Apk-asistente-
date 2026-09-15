@@ -24,12 +24,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -159,7 +159,7 @@ fun AssistantScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.VolumeOff,
+                                    imageVector = Icons.AutoMirrored.Filled.VolumeOff,
                                     contentDescription = "Silenciar voz",
                                     tint = Indigo400,
                                     modifier = Modifier.size(14.dp)
@@ -357,7 +357,7 @@ fun AssistantScreen(
                         .testTag("btn_send_command")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Send,
+                        imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Enviar orden",
                         tint = if (textInput.isNotBlank()) Color.White else Slate400,
                         modifier = Modifier.size(18.dp)

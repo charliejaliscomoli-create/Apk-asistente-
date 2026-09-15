@@ -42,7 +42,7 @@ class VoiceManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = textToSpeech?.setLanguage(Locale("es", "ES"))
+            val result = textToSpeech?.setLanguage(Locale.forLanguageTag("es-ES"))
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 // Fallback to default locale
                 textToSpeech?.setLanguage(Locale.getDefault())
