@@ -35,42 +35,65 @@ data class GeneratedTask(
 )
 
 object GeminiService {
-    private const val MODEL = "gemini-2.5-flash"
+    // Recommended default model for basic text and conversational tasks according to Gemini API guidance
+    private const val MODEL = "gemini-3.5-flash"
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent"
 
+    // OkHttpClient with 60s timeouts as mandated for Gemini API calls
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    suspend fun processCommand(
-        prompt: String,
+    /**
+     * Checks if a real Gemini API Key has been configured in .env / BuildConfig.
+     */
+    fun isApiKeyConfigured(): Boolean {
+        val key = BuildConfig.GEMINI_API_KEY
+        return key.isNotBlank() && key != "MY_GEMINI_API_KEY"
+    }
+
+    /**
+     * Connects to the Gemini REST API using the key configured in .env (BuildConfig.GEMINI_API_KEY)
+     * to interpret and process spoken voice commands from the user.
+     * Returns an AssistantResponse containing both the executable local action and a spoken reply for TextToSpeech.
+     */
+    suspend fun processVoiceCommand(
+        spokenPrompt: String,
         pendingTasksPreview: String = "",
         todayEventsPreview: String = ""
     ): AssistantResponse = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
-            return@withContext fallbackProcessCommand(prompt)
+        if (!isApiKeyConfigured()) {
+            return@withContext fallbackProcessCommand(spokenPrompt)
         }
 
         try {
             val systemInstruction = """
-                Eres Famous Asistente, el asistente ejecutivo de alta productividad del usuario.
-                Analiza la orden por voz o texto del usuario y responde OBLIGATORIAMENTE con un objeto JSON válido según este esquema:
+                Eres Famous Asistente, el copiloto ejecutivo de productividad del usuario en su teléfono Android.
+                El usuario te hablará mediante comandos de voz (o texto). Tu tarea es interpretar con precisión su intención,
+                determinar la acción que debe realizar la aplicación y redactar una respuesta hablada ejecutiva, cordial y concisa.
+                
+                IMPORTANTE para la respuesta hablada (spokenReply):
+                - Debe ser breve (máximo 1 a 2 oraciones).
+                - Diseñada específicamente para ser leída en voz alta con Text-To-Speech (sin asteriscos, sin viñetas, sin markdown).
+                - En español fluido y profesional.
+
+                Debes responder EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
                 {
                    "actionType": "CREATE_TASK" | "COMPLETE_TASK" | "GET_PENDING_TASKS" | "ADD_NOTE" | "SET_TIMER" | "CREATE_EVENT" | "GET_AGENDA" | "GENERAL_REPLY",
-                   "spokenReply": "Respuesta corta y ejecutiva de máximo 1 a 2 frases en español para ser leída por voz mediante TextToSpeech.",
-                   "title": "título o nombre de la tarea, nota, evento o temporizador",
-                   "content": "contenido de la nota si aplica",
+                   "spokenReply": "Respuesta limpia para síntesis de voz.",
+                   "title": "Título conciso de la tarea, nota, evento o temporizador",
+                   "content": "Cuerpo o detalle de la nota si aplica",
                    "category": "Trabajo" | "Finanzas" | "Campo/Inventario" | "General" | "Estudio" | "Personal" | "Salud" | "Proyectos",
                    "priority": "alta" | "media" | "baja",
                    "seconds": 10,
                    "time": "HH:mm"
                 }
 
-                Contexto actual del usuario:
-                - Tareas pendientes: $pendingTasksPreview
+                Contexto del usuario:
+                - Tareas pendientes actuales: $pendingTasksPreview
                 - Agenda de hoy: $todayEventsPreview
             """.trimIndent()
 
@@ -78,7 +101,7 @@ object GeminiService {
                 put("contents", JSONArray().apply {
                     put(JSONObject().apply {
                         put("parts", JSONArray().apply {
-                            put(JSONObject().apply { put("text", prompt) })
+                            put(JSONObject().apply { put("text", spokenPrompt) })
                         })
                     })
                 })
@@ -100,10 +123,10 @@ object GeminiService {
 
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                return@withContext fallbackProcessCommand(prompt)
+                return@withContext fallbackProcessCommand(spokenPrompt)
             }
 
-            val bodyString = response.body?.string() ?: return@withContext fallbackProcessCommand(prompt)
+            val bodyString = response.body?.string() ?: return@withContext fallbackProcessCommand(spokenPrompt)
             val root = JSONObject(bodyString)
             val candidates = root.optJSONArray("candidates")
             val candidate = candidates?.optJSONObject(0)
@@ -111,7 +134,7 @@ object GeminiService {
             val parts = content?.optJSONArray("parts")
             val rawText = parts?.optJSONObject(0)?.optString("text") ?: ""
             if (rawText.isBlank()) {
-                return@withContext fallbackProcessCommand(prompt)
+                return@withContext fallbackProcessCommand(spokenPrompt)
             }
 
             val cleanedText = rawText.trim()
@@ -132,17 +155,17 @@ object GeminiService {
 
             val action: AssistantAction = when (actionType) {
                 "CREATE_TASK" -> AssistantAction.CreateTask(
-                    title = if (title.isNotBlank()) title else prompt,
+                    title = if (title.isNotBlank()) title else spokenPrompt,
                     category = cat,
                     priority = priority
                 )
                 "COMPLETE_TASK" -> AssistantAction.CompleteTask(
-                    taskTitle = if (title.isNotBlank()) title else prompt
+                    taskTitle = if (title.isNotBlank()) title else spokenPrompt
                 )
                 "GET_PENDING_TASKS" -> AssistantAction.GetPendingTasks
                 "ADD_NOTE" -> AssistantAction.AddNote(
                     title = if (title.isNotBlank()) title else "Nota rápida",
-                    content = if (noteContent.isNotBlank()) noteContent else prompt,
+                    content = if (noteContent.isNotBlank()) noteContent else spokenPrompt,
                     category = cat
                 )
                 "SET_TIMER" -> AssistantAction.SetTimer(
@@ -152,16 +175,25 @@ object GeminiService {
                 "CREATE_EVENT" -> AssistantAction.CreateEvent(
                     title = if (title.isNotBlank()) title else "Reunión",
                     time = if (time.isNotBlank()) time else "12:00",
-                    description = prompt
+                    description = spokenPrompt
                 )
                 "GET_AGENDA" -> AssistantAction.GetAgenda
                 else -> AssistantAction.GeneralReply(spokenReply)
             }
             AssistantResponse(action, spokenReply)
         } catch (e: Exception) {
-            fallbackProcessCommand(prompt)
+            fallbackProcessCommand(spokenPrompt)
         }
     }
+
+    /**
+     * Backward-compatible alias for processing commands.
+     */
+    suspend fun processCommand(
+        prompt: String,
+        pendingTasksPreview: String = "",
+        todayEventsPreview: String = ""
+    ): AssistantResponse = processVoiceCommand(prompt, pendingTasksPreview, todayEventsPreview)
 
     suspend fun breakdownGoal(goal: String): List<GeneratedTask> = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY

@@ -138,7 +138,7 @@ fun AssistantScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isProcessingAi) "Procesando con Gemini 2.5 Flash..." else "Asistente Ejecutivo Activo",
+                        text = if (isProcessingAi) "Procesando con Gemini 3.5 Flash..." else "Asistente Ejecutivo Activo",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
